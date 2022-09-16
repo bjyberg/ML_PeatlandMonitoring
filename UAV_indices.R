@@ -1,3 +1,18 @@
+## ########################## ##
+##
+## Author: Brayden Youngberg
+##
+## This collection of scripts were developed for my MSc dissertation to classify
+## aspects of peatland condition using ultra-high resolution remote sensing data.
+## 
+## This script is used to process RGB and multi-spectral data, along with DEMs, to
+## create variables and variable stacks for classification. This utilises a helper
+## script defining the calculations for the different indices.
+##
+## License: GPL-3.0 license
+##
+## ########################## ##
+
 library(terra)
 #calculate normalized reflectance (if calculating from Metashape exported Micasense data)#
 Mica.reflectance <- function(data, bands) {data[[bands]]/32768}

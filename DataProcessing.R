@@ -1,24 +1,60 @@
+## ########################## ##
+##
+## Author: Brayden Youngberg
+##
+## This collection of scripts were developed for my MSc dissertation to classify
+## aspects of peatland condition using ultra-high resolution remote sensing data.
+## 
+## This script is used to process RGB and multi-spectral data, along with DEMs, to
+## create variables and variable stacks for classification. This utilises a helper
+## script defining the calculations for the different indices.
+##
+## License: GPL-3.0 license
+##
+## ########################## ##
+
 library(terra)
 library(RStoolbox)
-source('UAV_indices.R')
+source('UAV_indices.R') #Call the functions for creating Optical Indices from other sctipt
 
-####Setup Variables####
-Site <- 1 #list site number for saving outputs if performing training and analysis on multiple sites
-
-#import data paths
-
-#If listed as 'NOT REQUIRED' don't create object unless it is being used
-#The TWI and DSM must be from the same DSM dataset (i.e., MicaSense Terrain and MicaSense TWI), and a TWI cannot be used without a DSM
-AOI <- vect('/home/bjyberg/Peatland/Ardgowan_Data/ShapeFiles/SmallerTestArea.shp') # AOI if using a subsection of a site - NOT REQUIRED
-Micasense.Full <-rast('/home/bjyberg/Peatland/Ardgowan_Data/Site1/S1_mica.tif', lyrs = c(1,2,3,4,5)) #MicaSense Imagery - REQUIRED
-DJI.full <-rast('/home/bjyberg/Peatland/Ardgowan_Data/Site1/S1_dji.tif', lyrs = c(1,2,3)) #DJI RGB imagery -REQUIRED
-dsm.mica.full <- rast('/home/bjyberg/Peatland/Ardgowan_Data/Site1/S1_DSM_mica.tif') #MicaSense DSM - NOT REQUIRED
-dsm.dji.full <- rast('/home/bjyberg/Peatland/Ardgowan_Data/Site1/S1_DSM_dji.tif') #DJI DSM - NOT REQUIRED
-##twi.mica.full <- rast('/data/Fullsite/S1_Mica_TWI.tif') #MicaSense Topographic Wetness Index (TWI) created using SAGA in QGIS - NOT REQUIRED
-twi.dji.full <- rast('/home/bjyberg/Peatland/Ardgowan_Data/TWI/DJI_TWI.tif') #DJI TWI - NOT REQUIRED
-
+###Setup Variables###
 #Set path for processed data outputs, defaults to working directory if not listed
 output_folder <- ('~/test') # - NOT REQUIRED
+#If listed as 'NOT REQUIRED' don't create object unless it is being used
+#The TWI and DSM must be from the same DSM dataset (i.e., MicaSense Terrain and MicaSense TWI), and a TWI cannot be used without a DSM
+
+Site_Name <- 1 #list site number/name for saving outputs
+Area <- ('Data/ShapeFiles/SmallerTestArea.shp') #Shapefile for cropping rasters to an area of interest -- NOT REQUIRED
+Micasense_Imagery <- ('Data/Site1/S1_mica.tif') # -- REQUIRED
+MicaSense_DEM <- ('Data/Site1/S1_DSM_mica.tif') # -- NOT REQUIRED
+#MicaSense_TWI <- () #Topographic Wetness Index (TWI) created using SAGA in QGIS -- NOT REQUIRED
+DJI_Imagery <- ('Data/Site1/S1_dji.tif')# -- REQUIRED
+DJI_DEM <-('Data/Site1/S1_DSM_dji.tif') # -- NOT REQUIRED
+DJI_TWI <- ('Data/TWI/DJI_TWI.tif') # -- NOT REQUIRED
+
+
+
+####import data####
+if (exists("Area")) {
+  AOI <- vect(Area) # AOI if using a subsection of a site 
+}
+
+Micasense.Full <-rast(Micasense_Imagery, lyrs = c(1,2,3,4,5)) 
+
+DJI.full <-rast(DJI_Imagery, lyrs = c(1,2,3))
+
+if (exists("MicaSense_DEM")) {
+  dsm.mica.full <- rast(MicaSense_DEM)
+}
+if (exists("DJI_DEM")) {
+  dsm.dji.full <- rast(DJI_DEM)
+}
+if (exists("MicaSense_TWI")) {
+  twi.mica.full <- rast(MicaSense_TWI)
+}
+if (exists("DJI_TWI")) {
+  twi.dji.full <- rast(DJI_TWI)
+}
 
 if (!exists("output_folder")) {
   output_folder <- getwd()
@@ -60,7 +96,7 @@ MicaIndices <- c(NDVI.Mica, GNDVI.Mica, NDRE.Mica, EVI.Mica, MTVI2.Mica,
 names(MicaIndices) <- c('NDVI.Mica', 'GNDVI.Mica', 'NDRE.Mica', 'EVI.Mica', 'MTVI2.Mica', 
                            'REsimple.Mica', 'coreRtvi.Mica', 'MCARI2.Mica', 'PCA1', 'PCA2')
 
-writeRaster(MicaIndices, paste0(output_folder, '/', 'S', Site, 'Mica_Indicies.tif'))
+writeRaster(MicaIndices, paste0(output_folder, '/', 'S', Site_Name, 'Mica_Indicies.tif'))
 
 ###Prep Micasense Terrain
 
@@ -103,7 +139,7 @@ if (exists('twi.mica.full')) {
 }
 
 if (exists('Mica.TRindices')) {
-    writeRaster(Mica.TRindices, paste0(output_folder, '/', Site, 'MicaTRIndices.tif'))
+    writeRaster(Mica.TRindices, paste0(output_folder, '/', Site_Name, 'MicaTRIndices.tif'))
 }
 
 ####Prep DJI####
@@ -126,7 +162,7 @@ Brightness_avg.rgb <- avg.Brightness(DJI.rgb)
 DJI.indices <- c(GLI.rgb, SBrightness.rgb, Brightness_avg.rgb)
 names(DJI.indices) <- c('GLI', 'SBrigntness', 'Brightness_avg')
 
-writeRaster(DJI.indices, paste0(output_folder, '/', Site, 'DJI_indicies.tif'))
+writeRaster(DJI.indices, paste0(output_folder, '/', Site_Name, 'DJI_indicies.tif'))
 
 ##Prep DJI terrain
 
@@ -169,7 +205,7 @@ if (exists('dsm.dji.full')) {
 }
 
 if (exists('DJI.TRindices')) {
-  writeRaster(DJI.TRindices, paste0(output_folder, '/', Site, 'DJI_TRindices.tif'))
+  writeRaster(DJI.TRindices, paste0(output_folder, '/', Site_Name, 'DJI_TRindices.tif'))
 }
 
 
