@@ -15,7 +15,7 @@
 
 library(terra)
 library(RStoolbox)
-source('UAV_indices.R') #Call the functions for creating Optical Indices from other sctipt
+source('UAV_indices.R') #Call the functions for creating Optical Indices from other script
 
 ###Setup Variables###
 #Set path for processed data outputs, defaults to working directory if not listed
@@ -23,7 +23,7 @@ output_folder <- ('~/test') # - NOT REQUIRED
 #If listed as 'NOT REQUIRED' don't create object unless it is being used
 #The TWI and DSM must be from the same DSM dataset (i.e., MicaSense Terrain and MicaSense TWI), and a TWI cannot be used without a DSM
 
-Site_Name <- 1 #list site number/name for saving outputs
+Site_Name <- ('1') #list site number/name for saving outputs
 Area <- ('Data/ShapeFiles/SmallerTestArea.shp') #Shapefile for cropping rasters to an area of interest -- NOT REQUIRED
 Micasense_Imagery <- ('Data/Site1/S1_mica.tif') # -- REQUIRED
 MicaSense_DEM <- ('Data/Site1/S1_DSM_mica.tif') # -- NOT REQUIRED
@@ -96,7 +96,7 @@ MicaIndices <- c(NDVI.Mica, GNDVI.Mica, NDRE.Mica, EVI.Mica, MTVI2.Mica,
 names(MicaIndices) <- c('NDVI.Mica', 'GNDVI.Mica', 'NDRE.Mica', 'EVI.Mica', 'MTVI2.Mica', 
                            'REsimple.Mica', 'coreRtvi.Mica', 'MCARI2.Mica', 'PCA1', 'PCA2')
 
-writeRaster(MicaIndices, paste0(output_folder, '/', 'S', Site_Name, 'Mica_Indicies.tif'))
+writeRaster(MicaIndices, paste0(output_folder, '/', Site_Name, 'Mica_Indicies.tif'))
 
 ###Prep Micasense Terrain
 
