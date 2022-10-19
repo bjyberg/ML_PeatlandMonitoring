@@ -4,17 +4,20 @@ library(caret)
 library(groupdata2)
 
 split.ratio <- split.ratio #used to change training and validation split ratio
-Class.name <- ('class')
-ID.name <- ('originfid')
+category_col <- ('class')
+id_col <- ('originfid')
 
 #Split for Polygons
-PolySplit <- function(Training_polygons) {
- T.polygons <- as.data.frame(read_sf("Training_polygons"))
-  Partition1 <- groupdata2::partition(T.polygons, p=split.ratio, cat_col = 'class', id_col = 'originfid')
+PolySplit <- function(Training_polygons, category_col, id_col) {
+  sf_use_s2(FALSE)
+  poly.points <- st_sample(Training_Polygons, Num_points, type = 'random', by_polygon = TRUE)
+  poly.points.sf <- st_sf(poly.points)
+  poly.points.joined <- st_join(poly.points.sf, train.poly)
+  T.poly.points <- as.data.frame(read_sf(poly.points.joined))
+  Partition <- groupdata2::partition(T.polygons, p=split.ratio, cat_col = category_col, id_col = id_col)
   train <- as.data.frame(Partition1[1])
   val <- as.data.frame(Partition1[2])
-  st_write(train, paste0(output_folder, "TrainPoints", '1', ".shp"))
-  st_write(val, paste0(output_folder, "ValPoints", '1', ".shp"))
+  rm(poly.points, poly.points.sf, poly.points.joined, T.poly.points, Partition1)
 }
 
 #split for Points
