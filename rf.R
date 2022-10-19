@@ -6,7 +6,7 @@
 ###When sampling points from polygons, it is designed to sample with regard to 
 
 ## ############################################################## ##
-#FIX THE POINTs sPLIT & UsE DATA PARTITION INsTEAD OF WHATEVER IT Is CURRENTLY 
+
 ### ################################################################# ###
 
 library(caret)
@@ -18,8 +18,7 @@ library(boruta)
 library(sf)
 source('split_training.R') #only needed if training and validation polygons are in the same shapefile
 
-#---- Required Setup ----
-
+#---- Required Setup ---
 #Options
 run_name <- ("Micasense_all") # Name to save output maps and trained algorithm -- Required
 Training_Name <- ("1500 Points") #name to save training/validation points --Required if separate points are not provided
@@ -27,7 +26,6 @@ run_botura <- ('no') #Run Botura feature selection? (yes/no), defaults to no -- 
 set.seed(6255) #Allows repeatability in random sampling/number generation -- NOT REQUIRED
 split.ratio <-0.8 #determines the split percentage of labelled data (Default: 80% Training, 20% validation)
 Output_Folder <- ('test/RF_out') # Path for outputs. Defaults to working directory if not provided -- NOT REQUIRED
-
 
 #set path for variables
 site_Optical_variables <- ('/home/bjyberg/test/s1Mica_Indicies.tif') # --Required
@@ -74,11 +72,11 @@ if (exists('site2_Optical_variables')) {
 if (exists('site2_Terrain_variables')) {
   s2.terrain.data <- rast(site2_Optical_variables)
 }
-#### Get Started ---- ### ADD TIME Clock
+#### Start Clock and Make Output folder----
 if (!exists("output_folder")) {
   output_folder <- getwd()
 }
-
+startTime <- Sys.time() 
 ####Training Data split ----
 if (exists('Validation_polygons') & exists("Num_points")) {
   s1.val.poly <- st_read(Validation_polygons)
