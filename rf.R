@@ -10,7 +10,7 @@
 ### ################################################################# ###
 
 library(caret)
-library(raster)
+library(terra)
 library(ranger)
 library(dplyr)
 library(doParallel)
@@ -19,13 +19,14 @@ library(sf)
 source('Split_training.R') #only needed if training and validation polygons are in the same shapefile
 
 #Options
-run_botura <- ('no') #Run Botura feature selection? (yes/no), defaults to no -- Required
-set.seed(6255) #Allows repeatability in random sampling/number generation
-split.ratio <-0.8 #if needed, determines the split percentage of labelled data (Default: 80% Training, 20% validation)
-
-#Setup
 run_name <- ("Micasense_all") # Name to save output maps and trained algorithm -- Required
+Training_Name <- ("1500 Points") #name to save training/validation points --Required if separate points are not provided
+run_botura <- ('no') #Run Botura feature selection? (yes/no), defaults to no -- Required
+set.seed(6255) #Allows repeatability in random sampling/number generation -- NOT REQUIRED
+split.ratio <-0.8 #determines the split percentage of labelled data (Default: 80% Training, 20% validation)
 Output_Folder <- ('test/RF_out') # Path for outputs. Defaults to working directory if not provided -- NOT REQUIRED
+
+
 #set path for variables
 Site_Optical_variables <- ('/home/bjyberg/test/S1Mica_Indicies.tif') # --Required
 Site_Terrain_Variables <- ('/home/bjyberg/test/1MicaTRIndices.tif') # --Not Required
@@ -83,41 +84,37 @@ if (exists('Validation_polygons') & exists("Num_points")) {
   s1.train.poly.points <- st_sample(S1.train.poly, Num_points, type = 'random', by_polygon = TRUE)
   s1.poly.train.points.sf = st_sf(s1.poly.points)
   s1.poly.train.points.joined = st_join(s1.poly.points.sf, S1.train.poly)
-  st_write(train, paste0(output_folder, "Poly_TrainPoints", '1', ".shp"))
+  st_write(train, paste0(output_folder, "Poly_Train", Training_Name, '1', ".shp"))
   
   s1.val.poly.points <- st_sample(S1.val.poly, Num_points, type = 'random', by_polygon = TRUE)
   s1.poly.val.points.sf = st_sf(s1.val.poly.points)
   s1.poly.val.points.joined = st_join(s1.val.poly.points.sf, S1.val.poly)
-  st_write(val, paste0(output_folder, "Poly_ValPoints", '1', ".shp"))
+  st_write(val, paste0(output_folder, "Poly_Val", Training_Name, '1', ".shp"))
   
-  S1.train.poly <- vect(paste0(output_folder, "poly_TrainPoints", '1', ".shp"))
-  S1.val.poly <- vect(paste0(output_folder, "Poly_ValPoints", '1', ".shp"))
+  S1.train.poly <- vect(paste0(output_folder, "Poly_Train", Training_Name, '1', ".shp"))
+  S1.val.poly <- vect(paste0(output_folder, "Poly_Val", Training_Name, '1', ".shp"))
 } else if (exists('Validation_polygons')) {
   s1.val.poly <- vect(Validation_polygons)
   S1.train.poly <- vect(Training_polygons)
-  
 } else if (exists('Training_polygons') & !exists('Validation_polygons')) {
-  S1.train.poly <- st_read(Training_polygons)
-  sf_use_s2(FALSE)
-  s1.poly.points <- st_sample(S1.train.poly, Num_points, type = 'random', by_polygon = TRUE)
-  s1.poly.points.sf = st_sf(s1.poly.points)
-  s1.poly.points.joined = st_join(s1.poly.points.sf, S1.train.poly)
+  s1.train.poly <- st_read(Training_polygons)
   PolySplit(s1.poly.points.joined)
-  st_write(train, paste0(output_folder, "TrainPoints", '1', ".shp"))
-  st_write(val, paste0(output_folder, "ValPoints", '1', ".shp"))
-  S1.train.poly <- vect(paste0(output_folder, "TrainPoints", '1', ".shp"))
-  S1.val.poly <- vect(paste0(output_folder, "ValPoints", '1', ".shp"))
+  st_write(train, paste0(output_folder, "Training_", Training_Name, '1', ".shp"))
+  st_write(val, paste0(output_folder, "Val_", Training_Name, '1', ".shp"))
+  s1.train.poly <- vect(paste0(output_folder, "Training_", Training_Name, '1', ".shp"))
+  s1.val.poly <- vect(paste0(output_folder, "Val_", Training_Name, '1', ".shp"))
 }
 
 if (exists('Validation_points')) {
   s1.val.point <- vect(Validation_points)
   S1.train.point <- vect(Training_points)
-} else if (exists('Training_points')) { ########### I DON"T THINK THIS IS NEEDED FOR POINTS... COULD JUST SPLIT WITH CARET
-  PolySplit()
-  st_write(train, paste0(output_folder, "TrainPoints", '1', ".shp"))
-  st_write(val, paste0(output_folder, "ValPoints", '1', ".shp"))
-  S1.train.point <- vect(paste0(output_folder, "TrainPoints", '1', ".shp"))
-  S1.val.point <- vect(paste0(output_folder, "ValPoints", '1', ".shp"))
+} else if (exists('Training_points')) {
+  partition.points <- vect(Training_points)
+  training.part <- createDataPartition(points$class, p=split.ratio, list = FALSE)
+  train_data <- points[TrainingP, ]
+  test_data <- points[-TrainingP, ]
+  writeVector(train_data, (paste0(output_folder, "Partitioned_Train", Training_Name, '1', ".shp")))
+  writeVector(train_data, (paste0(output_folder, "Partitioned_Validation", Training_Name, '1', ".shp")))         
 } 
 
 if (!exists('Training_points') & !exists('Training_polygons')) {
@@ -148,9 +145,6 @@ if (exists('Validation_polygons2') & exists(Num_points2)) {
   S2.train.poly <- vect(Training_polygons2)
 } else if (exists('Training_polygons2') & !exists('Validation_polygons2')) {
   s2.train.poly <- st_read(Training_polygons2)
-  s2.poly.points <- st_sample(S2.train.poly, Num_points2, type = 'random', by_polygon = TRUE)
-  s2.poly.points.sf = st_sf(s2.poly.points)
-  s2.poly.points.joined = st_join(s2.poly.points.sf, s2.train.poly)
   PolySplit(s2.poly.points.joined)
   st_write(train, paste0(output_folder, "TrainPoints", '2', ".shp"))
   st_write(val, paste0(output_folder, "ValPoints", '2', ".shp"))
@@ -161,8 +155,8 @@ if (exists('Validation_polygons2') & exists(Num_points2)) {
 if (exists('Validation_points2')) {
   s2.val.point <- vect(Validation_points2)
   S2.train.point <- vect(Training_points2)
-} else if (exists('Training_polygons2')) {
-  PolySplit()
+} else if (exists('Training_points2')) { #############?????????????????????
+  
   st_write(train, paste0(output_folder, "TrainPoints", '2', ".shp"))
   st_write(val, paste0(output_folder, "ValPoints", '2', ".shp"))
   S2.train.point <- vect(paste0(output_folder, "TrainPoints", '2', ".shp"))
