@@ -83,27 +83,21 @@ if (!exists("output_folder")) {
 if (exists('Validation_polygons') & exists("Num_points")) {
   s1.val.poly <- st_read(Validation_polygons)
   s1.train.poly <- st_read(Training_polygons)
-  
-  s1.train.poly.points <- st_sample(s1.train.poly, Num_points, type = 'random', by_polygon = TRUE)
-  s1.poly.train.points.sf = st_sf(s1.poly.points)
-  s1.poly.train.points.joined = st_join(s1.poly.points.sf, s1.train.poly)
+  PolySample(s1.train.poly)
   st_write(poly.points.joined, paste0(output_folder, "Poly_Train", Training_Name, '1', ".shp"))
-  
-  s1.val.poly.points <- st_sample(s1.val.poly, Num_points, type = 'random', by_polygon = TRUE)
-  s1.poly.val.points.sf = st_sf(s1.val.poly.points)
-  s1.poly.val.points.joined = st_join(s1.val.poly.points.sf, s1.val.poly)
+  PolySample(s1.val.poly)
   st_write(poly.points.joined, paste0(output_folder, "Poly_Val", Training_Name, '1', ".shp"))
-  
   s1.train.points <- vect(paste0(output_folder, "Poly_Train", Training_Name, '1', ".shp"))
   s1.val.points <- vect(paste0(output_folder, "Poly_Val", Training_Name, '1', ".shp"))
-  rm(s1.train.poly)
+  rm(s1.train.poly, s1.val.poly)
   
 } else if (exists('Validation_polygons')) {
   s1.val.poly <- vect(Validation_polygons)
   s1.train.poly <- vect(Training_polygons)
 } else if (exists('Training_polygons') & !exists('Validation_polygons')) {
   s1.train.poly <- st_read(Training_polygons)
-  Polysplit(s1.poly.points.joined)
+  PolySample(s1.train.poly)
+  PolySplit(poly.points.joined)
   st_write(train, paste0(output_folder, "Training_", Training_Name, '1', ".shp"))
   st_write(val, paste0(output_folder, "Val_", Training_Name, '1', ".shp"))
   s1.train.poly <- vect(paste0(output_folder, "Training_", Training_Name, '1', ".shp"))
@@ -131,27 +125,20 @@ if (!exists('Training_points') & !exists('Training_polygons')) {
 if (exists('Validation_polygons2') & exists(Num_points2)) {
   s2.val.poly <- st_read(Validation_polygons2)
   s2.train.poly <- st_read(Training_polygons2)
-  
-  s2.train.poly.points <- st_sample(s2.train.poly, Num_points2, type = 'random', by_polygon = TRUE)
-  s2.poly.train.points.sf = st_sf(s2.poly.points)
-  s2.poly.train.points.joined = st_join(s2.poly.points.sf, s2.train.poly)
-  st_write(train, paste0(output_folder, "Poly_Train", Training_Name, '2', ".shp"))
-  
-  s2.val.poly.points <- st_sample(s2.val.poly, Num_points2, type = 'random', by_polygon = TRUE)
-  s2.poly.val.points.sf = st_sf(s2.val.poly.points)
-  s2.poly.val.points.joined = st_join(s2.val.poly.points.sf, s2.val.poly)
-  st_write(val, paste0(output_folder, "Poly_Val", Training_Name, '2', ".shp"))
-  
+  PolySample(s2.train.poly)
+  st_write(poly.points.joined, paste0(output_folder, "Poly_Train", Training_Name, '2', ".shp"))
+  PolySample(s2.val.poly)
+  st_write(poly.points.joined, paste0(output_folder, "Poly_Val", Training_Name, '2', ".shp"))
   s2.train.point <- vect(paste0(output_folder, "poly_Train", Training_Name, '2', ".shp"))
   s2.val.point <- vect(paste0(output_folder, "Poly_Val",Training_Name, '2', ".shp"))
-  rm(s2.train.poly.points, s2.poly.train.points.sf, s2.poly.train.points.joined,
-     s2.poly.val.points.sf, s2.val.poly.points, s2.poly.val.points.joined)
+  rm(s2.val.poly, s2.train.poly))
 } else if (exists('Validation_polygons2')) {
   s2.val.poly <- vect(Validation_polygons2)
   s2.train.poly <- vect(Training_polygons2)
 } else if (exists('Training_polygons2') & !exists('Validation_polygons2')) {
   s2.train.poly <- st_read(Training_polygons2)
-  Polysplit(s2.poly.points.joined)
+  PolySample(s2.train.poly)
+  PolySplit(poly.points.joined)
   st_write(train, paste0(output_folder, "TrainPoints", '2', ".shp"))
   st_write(val, paste0(output_folder, "ValPoints", '2', ".shp"))
   s2.train.poly <- vect(paste0(output_folder, "TrainPoints", '2', ".shp"))
