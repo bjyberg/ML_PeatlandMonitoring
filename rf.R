@@ -22,7 +22,7 @@ source('split_training.R') #only needed if training and validation polygons are 
 #Options
 run_name <- ("Micasense_all") # Name to save output maps and trained algorithm -- Required
 Training_Name <- ("1500 Points") #name to save training/validation points --Required if separate points are not provided
-run_botura <- ('no') #Run Botura feature selection? (yes/no), defaults to no -- Required
+run_boruta <- ('FALSE') #Run boruta feature selection? () -- Required
 set.seed(6255) #Allows repeatability in random sampling/number generation -- NOT REQUIRED
 split.ratio <-0.8 #determines the split percentage of labelled data (Default: 80% Training, 20% validation)
 Output_Folder <- ('test/RF_out') # Path for outputs. Defaults to working directory if not provided -- NOT REQUIRED
@@ -98,20 +98,22 @@ if (exists('Validation_polygons') & exists("Num_points")) {
   PolySplit(poly.points.joined)
   st_write(train, paste0(output_folder, "Training_", Training_Name, '1', ".shp"))
   st_write(val, paste0(output_folder, "Val_", Training_Name, '1', ".shp"))
-  s1.train.poly <- vect(paste0(output_folder, "Training_", Training_Name, '1', ".shp"))
-  s1.val.poly <- vect(paste0(output_folder, "Val_", Training_Name, '1', ".shp"))
+  s1.train.points <- vect(paste0(output_folder, "Training_", Training_Name, '1', ".shp"))
+  s1.val.points <- vect(paste0(output_folder, "Val_", Training_Name, '1', ".shp"))
 }
 
 if (exists('Validation_points')) {
-  s1.val.point <- vect(Validation_points)
-  s1.train.point <- vect(Training_points)
+  s1.val.points <- vect(Validation_points)
+  s1.train.points <- vect(Training_points)
 } else if (exists('Training_points')) {
   partition.points <- vect(Training_points)
   training.part <- createDataPartition(points$class, p=split.ratio, list = FALsE)
   train_data <- points[TrainingP, ]
   test_data <- points[-TrainingP, ]
   writeVector(train_data, (paste0(output_folder, "Partitioned_Train", Training_Name, '1', ".shp")))
-  writeVector(train_data, (paste0(output_folder, "Partitioned_Validation", Training_Name, '1', ".shp")))         
+  writeVector(train_data, (paste0(output_folder, "Partitioned_Validation", Training_Name, '1', ".shp")))
+  s1.val.points <- vect(Validation_points)
+  s1.train.points <- vect(Training_points)
 } 
 
 if (!exists('Training_points') & !exists('Training_polygons')) {
@@ -164,5 +166,15 @@ if ((exists('site2_Optical_Variables') | exists('site2_Terrain_Variables')) & !e
 
 
 
+###Extract Values###
+T.points <- 
 ###Boruta####
+if run_boruta == TRUE {
+  if ###figure out the site 1 and 2 stuff
+  Boruta.run <-Boruta(as.factor(class)~., data = T.V.Values, maxRuns = 100, doTrace = 2)
+} else {
+  print("No boruta Feature Selection Run")
+}
 
+
+###Random Forest####
