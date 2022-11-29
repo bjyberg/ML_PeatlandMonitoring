@@ -10,6 +10,7 @@
 ### ################################################################# ###
 
 library(caret)
+library(CAST)
 library(terra)
 library(ranger)
 library(dplyr)
