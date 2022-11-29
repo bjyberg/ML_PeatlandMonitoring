@@ -42,15 +42,24 @@ for (i in 1:length(patch_grid)) { #add option for parallell and put in function
                                    '/','label_patch_', i, '.tif'))
 }
 
-label_tile_I <- rast['Num_class'] %>% #[must be title or layer, make groud mask always 1]
+label_tile_I <- rast['Num_class'] %>% #[must be title or layer, make ground mask always 1]
   crop(patch_grid[50])
 
 plot(label_tile_I)
 
 plot(crop(rast[[1]],patch_grid[1]))
-plot(patch_grid[1], add= TRUE)
+plot(patch_grid[1], add = TRUE)
 plot(patch_grid[c(1,2,3,4,5)])
-####Star test runs
+
+
+
+
+
+
+
+
+
+####Star test runs####
 labs <- read_stars(labels_path)
 im <- read_stars(image_path)
 st_dimensions(im)
@@ -61,7 +70,7 @@ st_crs(im)[1]
 st_crs(labs)[2]
 
 
-#Terra Functions
+#Terra Functions----
 rasterize_labels <- function (labels_path, image_path, Field, output_path) {
   labels <- vect(labels_path)
   example.raster <- rast(image_path, lyr=1)
@@ -78,19 +87,17 @@ rasterize_labels <- function (labels_path, image_path, Field, output_path) {
   return(labs_raster)
 }
 
-dl_training_tile <- function (image_path, bands, labels_path, output_path) {
-  labels <- rast(labels_path)
-  raster <- rast(image_path, lyrs = bands)
-  cropped
-  stack <- c(raster, labels)
-  
+dl_training_tile <- function (image_raster, label_raster, output_path) {
+  cropped.labels <- crop(label_raster, image_raster)
+  stack <- c(image_raster, cropped.labels)
+  return(stack)
 }
 
 
+test <- dl_training_tile(rast, labs)
 
 
-
-#Star Functions
+#Star Functions ----
 rasterize_labels <- function (labels_path, image_path, output_path) {
   labs<- read_sf(labels_path)
   labs_raster <- st_rasterize(labs)
