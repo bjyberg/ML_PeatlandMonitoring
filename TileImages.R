@@ -1,3 +1,4 @@
+#function for augmentation - copy the magic + some
 library(stars)
 library(sf)
 library(terra)
@@ -27,7 +28,7 @@ plot(rast$MicaClip_1)
 plot(patch_grid, add = TRUE)
 rast <- c(labs, rast)
 
-for (i in 1:length(patch_grid)) {
+for (i in 1:length(patch_grid)) { #add option for parallell and put in function
   tile_i <- rast[[-'labels']] %>% 
     crop(patch_grid[i])
   dir.create(paste0(output_patches_dir, '/', 'patched_images'))
