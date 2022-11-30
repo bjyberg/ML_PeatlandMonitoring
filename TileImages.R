@@ -107,26 +107,28 @@ dl_training_tile <- function(image_raster, label_raster, n_pixels, output_path,
   dir.create(paste0(output_patches_dir, '/', 'patched_images'))
   image.patch.dir <- paste0(output_patches_dir, '/', 'patched_images')
   
-  img.tiles <-foreach(i = 1:length(patch_grid),
+  foreach(i = 1:length(patch_grid),
                       .packages = c('dplyr', 'terra'),
                       .export= c('par.stack', 'patch_grid'),
                       .inorder=TRUE) %dopar% {
-    tile_i <- rast(par.stack)[[-1]] %>% 
-      crop(patch_grid[[i]])
-    writeRaster(tile_i, paste0(image.patch.dir,
+    rast.stack <- rast(par.stack)                    
+    tile_i <- rast.stack[[3]] %>% ##############should be -1
+      crop(patch_grid[[i]]) %>%
+    writeRaster(paste0(image.patch.dir,
                                '/', site_name, '_image_patch_', i, '.tif'))
   }
   
   dir.create(paste0(output_patches_dir, '/', 'patched_labs'))
   label.patch.dir <- paste0(output_patches_dir, '/', 'patched_labs')
   
-  lab.tiles <- foreach(i = 1:length(patch_grid),
+  foreach(i = 1:length(patch_grid),
                        .packages = c('dplyr', 'terra'),
                        .export = c('par.stack', 'patch_grid'),
                        .inorder=TRUE) %dopar% {
-    label_tile_i <- rast(par.stack)[[1]] %>%
-      crop(patch_grid[[i]])
-    writeRaster(label_tile_i, paste0(label.patch.dir,
+    rast.stack <- rast(par.stack)
+    label_tile_i <- rast.stack[[1]] %>%
+      crop(patch_grid[[i]]) %>%
+    writeRaster(paste0(label.patch.dir,
                                      '/', site_name,'_label_patch_', i, '.tif'))
   }
   stopCluster(cl)
@@ -142,9 +144,16 @@ image_path <- 'C:\\Users\\byoungberg\\OneDrive - SRUC\\Documents\\Files\\MicaCli
 labels_vect_path <- 'C:\\Users\\byoungberg\\OneDrive - SRUC\\Documents\\Files\\Fast_labels.gpkg'
 output_patches_dir <- 'C:\\Users\\byoungberg\\OneDrive - SRUC\\Documents\\Files'
 
-rasto <- rast(image_path, lyrs =1:5)
+rasto <- rast(image_path, lyrs =rast_bands)
 labs <- vect(labels_vect_path)
 rasterise <- rasterize_labels(labs, field= 'Num_class', rasto)
+
+t.crop <- crop(rast.stack,patch_grid)
+plot(t.crop$Num_class)
+
+test <- dl_training_tile(rasto, rasterise, 32, output_patches_dir, 's1', n_cores=6)
+
+
 rast.stack <- c(rasterise, rasto)
 n_pixels <-32
 xyres <- res(rast.stack)
