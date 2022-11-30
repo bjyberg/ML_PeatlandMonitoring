@@ -155,7 +155,7 @@ rasterise <- rasterize_labels(labs, field= 'Num_class', rasto)
 t.crop <- crop(rast.stack,patch_grid)
 plot(t.crop$Num_class)
 
-test <- dl_training_tile(rasto, rasterise, 400, output_patches_dir, 's1', n_cores=6)
+test <- dl_training_tile(rasto, rasterise, 400, output_patches_dir, 's1', n_cores=7)
 
 
 rast.stack <- c(rasterise, rasto)
