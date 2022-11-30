@@ -88,6 +88,7 @@ rasterize_labels <- function(labels, field, image_raster, output_path){
 
 dl_training_tile <- function(image_raster, label_raster, n_pixels, output_path,
                             site_name, n_cores) {
+  start.time <- Sys.time()
   cropped.labels <- crop(label_raster, image_raster)
   rast.stack <- c(cropped.labels, image_raster)
   xyres <- res(rast.stack)
@@ -107,35 +108,38 @@ dl_training_tile <- function(image_raster, label_raster, n_pixels, output_path,
   dir.create(paste0(output_patches_dir, '/', 'patched_images'))
   image.patch.dir <- paste0(output_patches_dir, '/', 'patched_images')
   
-  foreach(i = 1:length(patch_grid),
+  image_tiles <- foreach(i = 1:length(patch_grid),
                       .packages = c('dplyr', 'terra'),
-                      .export= c('par.stack', 'patch_grid'),
-                      .inorder=TRUE) %dopar% {
+                      .export= c('par.stack', 'patch_grid')) %dopar% {
     rast.stack <- rast(par.stack)                    
-    tile_i <- rast.stack[[3]] %>% ##############should be -1
-      crop(patch_grid[[i]]) %>%
-    writeRaster(paste0(image.patch.dir,
-                               '/', site_name, '_image_patch_', i, '.tif'))
-  }
+    tile_i <- rast.stack[[-1]] %>% 
+      crop(patch_grid[[i]])%>%
+      writeRaster(paste0(image.patch.dir,
+                         '/', site_name, '_image_patch_', i, '.tif'))
+                      }
+  
   
   dir.create(paste0(output_patches_dir, '/', 'patched_labs'))
   label.patch.dir <- paste0(output_patches_dir, '/', 'patched_labs')
   
-  foreach(i = 1:length(patch_grid),
+  label_tiles <- foreach(i = 1:length(patch_grid),
                        .packages = c('dplyr', 'terra'),
                        .export = c('par.stack', 'patch_grid'),
                        .inorder=TRUE) %dopar% {
     rast.stack <- rast(par.stack)
     label_tile_i <- rast.stack[[1]] %>%
       crop(patch_grid[[i]]) %>%
-    writeRaster(paste0(label.patch.dir,
-                                     '/', site_name,'_label_patch_', i, '.tif'))
-  }
+      writeRaster(paste0(label.patch.dir,
+                         '/', site_name,'_label_patch_', i, '.tif'))
+                       }
   stopCluster(cl)
+  stop.time <- Sys.time()
+  overall_time <- stop.time - start.time
+  
+  print(paste('Elapsed time:', overall_time))
   print(paste('Image and label tiles saved to:', output_patches_dir,
-              'Total # Label Patches:', length(lab.tiles),
-              'Total # Image Patches', length(img.tiles)))
-  #print(TIME)
+              'Total # Label Patches:', length(label_tiles),
+              'Total # Image Patches', length(image_tiles)))
   print(paste('Size of tiles:', cell_size))
 }
 
@@ -151,7 +155,7 @@ rasterise <- rasterize_labels(labs, field= 'Num_class', rasto)
 t.crop <- crop(rast.stack,patch_grid)
 plot(t.crop$Num_class)
 
-test <- dl_training_tile(rasto, rasterise, 32, output_patches_dir, 's1', n_cores=6)
+test <- dl_training_tile(rasto, rasterise, 400, output_patches_dir, 's1', n_cores=6)
 
 
 rast.stack <- c(rasterise, rasto)
