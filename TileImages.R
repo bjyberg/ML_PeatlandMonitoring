@@ -4,12 +4,18 @@ library(terra)
 library(doParallel)
 library(foreach)
 library(dplyr)
+
+####test Run####
 image_path <- 'C:\\Users\\byoungberg\\OneDrive - SRUC\\Documents\\Files\\MicaClip.tif'
-labels_path <- 'C:\\Users\\byoungberg\\OneDrive - SRUC\\Documents\\Files\\Fast_train.tif'
 labels_vect_path <- 'C:\\Users\\byoungberg\\OneDrive - SRUC\\Documents\\Files\\Fast_labels.gpkg'
-#Make labels shp and rasterise to image
 output_patches_dir <- 'C:\\Users\\byoungberg\\OneDrive - SRUC\\Documents\\Files'
-dl_output_path <- ''
+rast_bands = c(1:5)
+rasto <- rast(image_path, lyrs =rast_bands)
+labs <- vect(labels_vect_path)
+rasterise <- rasterize_labels(labs, field= 'Num_class', rasto)
+tiles <-dl_training_tile(rasto, rasterise[[2]], 64, output_patches_dir, 's1')
+
+
 rast_bands <- c(1:5) #list of bands to read in - e.g., c(1,2,3,5,10) or 1:4
 tile_dimensions <- c(64, 64)
 length(rast_bands)
@@ -135,6 +141,17 @@ Slow_parallel_dl_training_tile <- function(image_raster, label_raster, n_pixels,
   return(c(overall_time, cell_size, image_tiles, label_tiles))
 }
 
+#increase_training_augmentation <- function
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -143,7 +160,7 @@ image_path <- 'C:\\Users\\byoungberg\\OneDrive - SRUC\\Documents\\Files\\MicaCli
 labels_vect_path <- 'C:\\Users\\byoungberg\\OneDrive - SRUC\\Documents\\Files\\Fast_labels.gpkg'
 output_patches_dir <- 'C:\\Users\\byoungberg\\OneDrive - SRUC\\Documents\\Files'
 
-rasto <- rast(image_path, lyrs =rast_bands)
+rasto <- rast(image_path, lyrs=rast_bands)
 labs <- vect(labels_vect_path)
 rasterise <- rasterize_labels(labs, field= 'Num_class', rasto)
 tiles <-dl_training_tile(rasto, rasterise[[2]], 64, output_patches_dir, 's1')
