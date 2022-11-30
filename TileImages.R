@@ -72,7 +72,7 @@ st_crs(labs)[2]
 
 
 #Terra Functions----
-rasterize_labels <- function (labels, field, image_raster, output_path){
+rasterize_labels <- function(labels, field, image_raster, output_path){
   if (crs(labels) != crs(image_raster)) {
     print(paste('Image transformation required for labels from',
                 as.character(st_crs(labels)[1]), 'to', 
@@ -87,19 +87,19 @@ rasterize_labels <- function (labels, field, image_raster, output_path){
 }
 
 dl_training_tile <- function(image_raster, label_raster, n_pixels, output_path,
-                            n_cores) {
+                            site_name, n_cores) {
   cropped.labels <- crop(label_raster, image_raster)
   rast.stack <- c(cropped.labels, image_raster)
-  xyres <- res(stack)
+  xyres <- res(rast.stack)
   round(xyres[1], 3) == round(xyres[2], 3) #is it square? ~~~~add a warning 
   cell_size <- round((n_pixels*xyres), 3)
-  cell_grid <- st_make_grid(stack, cellsize = cell_size)
+  cell_grid <- st_make_grid(rast.stack, cellsize = cell_size)
   patch_cells <- lengths(st_within(cell_grid, 
-                                   st_as_sfc(st_bbox(stack)))) >0
+                                   st_as_sfc(st_bbox(rast.stack)))) >0
   patch_grid <- cell_grid[patch_cells] #keep only the patches with complete data
-
+  par.stack <- wrap(rast.stack)
   if (missing(n_cores)) {
-    n_cores <- detectCores()-2
+    n_cores <- detectCores()-4
   }
   cl <- makeCluster(n_cores) # we start the parallel cluster
   registerDoParallel(cl) # we register it
@@ -107,20 +107,27 @@ dl_training_tile <- function(image_raster, label_raster, n_pixels, output_path,
   dir.create(paste0(output_patches_dir, '/', 'patched_images'))
   image.patch.dir <- paste0(output_patches_dir, '/', 'patched_images')
   
-  img.tiles <-foreach(i = 1:length(patch_grid), .packages = c('dplyr', 'terra')) %do% {
-    tile_i <- rast.stack[[-1]] %>% 
+  img.tiles <-foreach(i = 1:length(patch_grid),
+                      .packages = c('dplyr', 'terra'),
+                      .export= c('par.stack', 'patch_grid'),
+                      .inorder=TRUE) %dopar% {
+    tile_i <- rast(par.stack)[[-1]] %>% 
       crop(patch_grid[[i]])
-    writeRaster(tile_i, paste0(image.patch.dir, '/','image_patch_', i, '.tif'))
+    writeRaster(tile_i, paste0(image.patch.dir,
+                               '/', site_name, '_image_patch_', i, '.tif'))
   }
   
   dir.create(paste0(output_patches_dir, '/', 'patched_labs'))
   label.patch.dir <- paste0(output_patches_dir, '/', 'patched_labs')
   
-  lab.tiles <- foreach(i = 1:length(patch_grid), .packages = c('dplyr', 'terra')) %do% {
-    label_tile_i <- rast.stack[[1]] %>%
+  lab.tiles <- foreach(i = 1:length(patch_grid),
+                       .packages = c('dplyr', 'terra'),
+                       .export = c('par.stack', 'patch_grid'),
+                       .inorder=TRUE) %dopar% {
+    label_tile_i <- rast(par.stack)[[1]] %>%
       crop(patch_grid[[i]])
     writeRaster(label_tile_i, paste0(label.patch.dir,
-                                     '/','label_patch_', i, '.tif'))
+                                     '/', site_name,'_label_patch_', i, '.tif'))
   }
   stopCluster(cl)
   print(paste('Image and label tiles saved to:', output_patches_dir,
@@ -137,19 +144,26 @@ output_patches_dir <- 'C:\\Users\\byoungberg\\OneDrive - SRUC\\Documents\\Files'
 
 rasto <- rast(image_path, lyrs =1:5)
 labs <- vect(labels_vect_path)
-rasterise <- rasterize_labels(labs, field= 'Num_class', rast)
-rast.stack <- c(rasterise, rast)
+rasterise <- rasterize_labels(labs, field= 'Num_class', rasto)
+rast.stack <- c(rasterise, rasto)
 n_pixels <-32
-xyres <- res(stack)
+xyres <- res(rast.stack)
 cell_size <- round((n_pixels*xyres), 3) #size (m) per patch ~~~~add a print
-cell_grid <- st_make_grid(stack, cellsize = cell_size)
+cell_grid <- st_make_grid(rast.stack, cellsize = cell_size)
 patch_cells <- lengths(st_within(cell_grid, 
-                                 st_as_sfc(st_bbox(stack)))) >0
+                                 st_as_sfc(st_bbox(rast.stack)))) >0
 patch_grid <- cell_grid[patch_cells]
 plot(patch_grid[1])#
 
-labs <- foreach(i = 1:length(patch_grid), .packages = c('terra','sf')) %dopar% {
-label_tile_i <-  crop(rast.stack[3], patch_grid[[i]])
+n_cores <- detectCores()-4
+cl <- makeCluster(n_cores) # we start the parallel cluster
+registerDoParallel(cl) # 
+par.stack <- wrap(rast.stack)
+
+labs <- foreach(i = 1:length(patch_grid), .packages = c('terra','sf'),
+                .export = c('par.stack', 'patch_grid'), 
+                .inorder = TRUE) %dopar% {
+label_tile_i <-  crop(par.stack[3], patch_grid[[i]])
   #rast.stack[[1]] %>%
  #crop(patch_grid[[i]])
 }
@@ -162,7 +176,8 @@ writeRaster(label_tile_i, paste0(lab.patch.dir,
 
 length(labs)
 patch_grid[[7]]
-test <- dl_training_tile(rast, rasterise, 32, output_patches_dir, n_cores=7)
+
+test <- dl_training_tile(rasto, rasterise, 32, output_patches_dir, 's1', n_cores=7)
 
 #Star Functions ----
 rasterize_labels <- function (labels_path, image_path, output_path) {
