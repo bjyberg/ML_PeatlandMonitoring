@@ -4,10 +4,12 @@ library(terra)
 library(doParallel)
 library(foreach)
 library(dplyr)
+library(caret)
 
 ####test Run####
 image_path <- 'C:\\Users\\byoungberg\\OneDrive - SRUC\\Documents\\Files\\MicaClip.tif'
 labels_vect_path <- 'C:\\Users\\byoungberg\\OneDrive - SRUC\\Documents\\Files\\Fast_labels.gpkg'
+output_patches_dir <- 'C:\\Users\\byoungberg\\OneDrive - SRUC\\Documents\\Files'
 output_patches_dir <- 'C:\\Users\\byoungberg\\OneDrive - SRUC\\Documents\\Files'
 rast_bands = c(1:5)
 rasto <- rast(image_path, lyrs =rast_bands)
@@ -40,9 +42,10 @@ rasterize_labels <- function(labels, field, image_raster, output_path){
   return(list(overall_time, labs_raster))
 }
 
-dl_training_tile <- function(image_raster, label_raster, n_pixels, output_path,
-                             site_name) {
+dl_data_tile <- function(image_raster, label_raster, n_pixels, output_path,
+                             site_name, partition, seed) {
   start.time <- Sys.time()
+  
   cropped.labels <- crop(label_raster, image_raster)
   rast.stack <- c(cropped.labels, image_raster)
   xyres <- res(rast.stack)
@@ -53,34 +56,115 @@ dl_training_tile <- function(image_raster, label_raster, n_pixels, output_path,
                                    st_as_sfc(st_bbox(rast.stack)))) >0
   patch_grid <- cell_grid[patch_cells] #keep only the patches with complete data
   
-  dir.create(paste0(output_patches_dir, '/', 'patched_images'))
-  image.patch.dir <- paste0(output_patches_dir, '/', 'patched_images')
+  if (!missing(partition)) {
+    if (missing(seed)) {
+      set.seed(6255)
+      print('Automatically set seed to 6255')
+    } else {
+      set.seed(seed)
+    }
+    grid.df <- as.data.frame(patch_grid)
+    grid.df$id <- 1:nrow(grid.df)
+    train.part <- createDataPartition(grid.df$id, p=partition, list=FALSE)
+    train.data <- grid.df[train.part,]
+    val.test_unsplit <- grid.df[-train.part,]
+    test.val.part <- createDataPartition(val.test_unsplit$id,
+                                         p=0.6, list=FALSE)
+    val.data <- val.test_unsplit[test.val.part,]
+    test.data <- val.test_unsplit[-test.val.part,]
+    
+    test.data$partition <- 'test'
+    train.data$partition <- 'train'
+    val.data$partition <- 'validation'
+    
+    combined.df <- rbind(test.data, train.data, val.data)
+    partitioned_tiles <- st_as_sf(combined.df[-2])
+    
+    test.sfc <- st_sfc(test.data$geometry)
+    train.sfc <-st_sfc(train.data$geometry)
+    val.sfc <-st_sfc(val.data$geometry)
+    
+    #create directories for the outputs
+    dir.create(paste0(output_patches_dir, '/', 'training/patched_images'),
+               recursive = TRUE)
+    dir.create(paste0(output_patches_dir, '/', 'validation/patched_images'),
+               recursive = TRUE)
+    dir.create(paste0(output_patches_dir, '/', 'test/patched_images'),
+               recursive = TRUE)
+    dir.create(paste0(output_patches_dir, '/', 'training/patched_labels'))
+    dir.create(paste0(output_patches_dir, '/', 'validation/patched_labels'))
+    dir.create(paste0(output_patches_dir, '/', 'test/patched_labels'))
+    
+    train_image_tiles <- for(i in 1:length(train.sfc)) {
+      tile_i <- rast.stack[[-1]] %>% 
+        crop(train.sfc[[i]])%>%
+        writeRaster(paste0(output_patches_dir, '/', 'training/patched_images',
+                           '/', site_name, '_image_patch_', i, '.tif'))
+    }
+    val_image_tiles <- for(i in 1:length(val.sfc)) {
+      tile_i <- rast.stack[[-1]] %>% 
+        crop(val.sfc[[i]])%>%
+        writeRaster(paste0(output_patches_dir, '/', 'validation/patched_images',
+                           '/', site_name, '_image_patch_', i, '.tif'))
+    }
+    test_image_tiles <- for(i in 1:length(test.sfc)) {
+      tile_i <- rast.stack[[-1]] %>% 
+        crop(test.sfc[[i]])%>%
+        writeRaster(paste0(output_patches_dir, '/', 'test/patched_images',
+                           '/', site_name, '_image_patch_', i, '.tif'))
+    }
+    train_label_tiles <- for(i in 1:length(train.sfc)) {
+      label_tile_i <- rast.stack[[1]] %>%
+        crop(train.sfc[[i]]) %>%
+        writeRaster(paste0(output_patches_dir, '/', 'training/patched_labels',
+                           '/', site_name,'_label_patch_', i, '.tif'))
+    }
+    val_label_tiles <- for(i in 1:length(val.sfc)) {
+      label_tile_i <- rast.stack[[1]] %>%
+        crop(val.sfc[[i]]) %>%
+        writeRaster(paste0(output_patches_dir, '/', 'validation/patched_labels',
+                           '/', site_name,'_label_patch_', i, '.tif'))
+    }
+    test_label_tiles <- for(i in 1:length(test.sfc)) {
+      label_tile_i <- rast.stack[[1]] %>%
+        crop(test.sfc[[i]]) %>%
+        writeRaster(paste0(output_patches_dir, '/', 'test/patched_labels',
+                           '/', site_name,'_label_patch_', i, '.tif'))
+    }
+    
+  } else {
+    dir.create(paste0(output_patches_dir, '/', 'patched_images'))
+    image.patch.dir <- paste0(output_patches_dir, '/', 'patched_images')
   
-  image_tiles <- for(i in 1:length(patch_grid)) {
+    image_tiles <- for(i in 1:length(patch_grid)) {
     tile_i <- rast.stack[[-1]] %>% 
       crop(patch_grid[[i]])%>%
       writeRaster(paste0(image.patch.dir,
                          '/', site_name, '_image_patch_', i, '.tif'))
-  }
+        }
   
-  dir.create(paste0(output_patches_dir, '/', 'patched_labs'))
-  label.patch.dir <- paste0(output_patches_dir, '/', 'patched_labs')
+    dir.create(paste0(output_patches_dir, '/', 'patched_labs'))
+    label.patch.dir <- paste0(output_patches_dir, '/', 'patched_labs')
   
-  label_tiles <- for(i in 1:length(patch_grid)) {
-    label_tile_i <- rast.stack[[1]] %>%
-      crop(patch_grid[[i]]) %>%
-      writeRaster(paste0(label.patch.dir,
+    label_tiles <- for(i in 1:length(patch_grid)) {
+      label_tile_i <- rast.stack[[1]] %>%
+        crop(patch_grid[[i]]) %>%
+        writeRaster(paste0(label.patch.dir,
                          '/', site_name,'_label_patch_', i, '.tif'))
+    }
   }
   stop.time <- Sys.time()
   overall_time <- stop.time - start.time
   
   print(paste('Elapsed time:', overall_time))
-  print(paste('Image and label tiles saved to:', output_patches_dir,
-              'Total # Label Patches:', length(label_tiles),
-              'Total # Image Patches', length(image_tiles)))
+  print(paste('Image and label tiles saved to:', output_patches_dir))
+  print(paste('Total number of patches', length(patch_grid)))
   print(paste('Size of tiles:', cell_size))
-  return(c(overall_time, cell_size, image_tiles, label_tiles))
+}
+
+test_train_split <- function(image_directory, label_directory) {
+  list.files('./Data/Imagery/PeakDistrict/TrainingTiles',
+             full.names=T,pattern='tif')
 }
 
 Slow_parallel_dl_training_tile <- function(image_raster, label_raster, n_pixels, output_path,
@@ -163,7 +247,7 @@ output_patches_dir <- 'C:\\Users\\byoungberg\\OneDrive - SRUC\\Documents\\Files'
 rasto <- rast(image_path, lyrs=rast_bands)
 labs <- vect(labels_vect_path)
 rasterise <- rasterize_labels(labs, field= 'Num_class', rasto)
-tiles <-dl_training_tile(rasto, rasterise[[2]], 64, output_patches_dir, 's1')
+tiles <-dl_data_tile(rasto, rasterise[[2]], 64, output_patches_dir, 's1', 0.7)
 
 
 
