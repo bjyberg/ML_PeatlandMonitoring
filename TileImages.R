@@ -131,6 +131,9 @@ dl_data_tile <- function(image_raster, label_raster, n_pixels, output_path,
         writeRaster(paste0(output_patches_dir, '/', 'test/patched_labels',
                            '/', site_name,'_label_patch_', i, '.tif'))
     }
+    print(paste('Total number of training patches', length(train.sfc)))
+    print(paste('Total number of validation patches', length(val.sfc)))
+    print(paste('Total number of test patches', length(test.sfc)))
     
   } else {
     dir.create(paste0(output_patches_dir, '/', 'patched_images'))
@@ -158,8 +161,12 @@ dl_data_tile <- function(image_raster, label_raster, n_pixels, output_path,
   
   print(paste('Elapsed time:', overall_time))
   print(paste('Image and label tiles saved to:', output_patches_dir))
-  print(paste('Total number of patches', length(patch_grid)))
-  print(paste('Size of tiles:', cell_size))
+  print(paste('Total number of patches:', length(patch_grid)))
+  print(paste('Size of tiles:', cell_size[1]))
+  if (exists('partitioned_tiles')) {
+    plot(partitioned_tiles)
+    return(partitioned_tiles)
+  }
 }
 
 test_train_split <- function(image_directory, label_directory) {
@@ -247,7 +254,7 @@ output_patches_dir <- 'C:\\Users\\byoungberg\\OneDrive - SRUC\\Documents\\Files'
 rasto <- rast(image_path, lyrs=rast_bands)
 labs <- vect(labels_vect_path)
 rasterise <- rasterize_labels(labs, field= 'Num_class', rasto)
-tiles <-dl_data_tile(rasto, rasterise[[2]], 64, output_patches_dir, 's1', 0.7)
+tiles <-dl_data_tile(rasto, rasterise[[2]], 100, output_patches_dir, 's1')
 
 
 
