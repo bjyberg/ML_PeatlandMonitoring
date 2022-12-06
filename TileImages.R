@@ -6,6 +6,14 @@ library(terra)
 library(dplyr)
 library(caret)
 
+# #####
+# mica_raster <- rast('C:\\Users\\byoungberg\\OneDrive - SRUC\\Documents\\Files\\MicaClip.tif',
+#                     lyrs = c(1:5))
+# path <- 'C:\\Users\\byoungberg\\OneDrive - SRUC\\Documents\\Files\\'                    
+# 
+# dl_data_tile(image_raster =mica_raster, n_pixels = 64, output_path = path,
+#              site_name = 'testrun')
+
 #Terra Functions#
 rasterize_labels <- function(labels, field, image_raster, output_path){
   start.time <- Sys.time()
@@ -33,6 +41,27 @@ dl_data_tile <- function(image_raster, label_raster, n_pixels, output_path,
                              site_name, partition, seed) {
   start.time <- Sys.time()
   
+  if (missing(label_raster)){
+    xyres <- res(image_raster)
+    cell_size <- round((n_pixels*xyres), 3)
+    cell_grid <- st_make_grid(image_raster, cellsize = cell_size)
+    dir.create(paste0(output_path, '/', 'patched_image'),
+               recursive = TRUE)
+    
+    image_tiles <- for(i in 1:length(cell_grid)) {
+      tile_i <- image_raster %>% 
+        crop(cell_grid[[i]]) %>%
+        writeRaster(paste0(output_path, '/', 'patched_image',
+                           '/', site_name, '_image_patch_', i, '.tif'))
+    }
+    stop.time <- Sys.time()
+    overall_time <- stop.time - start.time
+    
+    print(paste('Elapsed time:', overall_time))
+    print(paste('Tiles saved to:', paste0(output_path,'/patched_image')))
+    print(paste('Total number of patches:', length(cell_grid)))
+    print(paste('Size of tiles:', cell_size[1]))
+  } else {
   if (ext(label_raster) > ext(image_raster)) {
     labels  <- crop(label_raster, image_raster)
   } else if (ext(label_raster) < ext(image_raster)) {
@@ -78,50 +107,50 @@ dl_data_tile <- function(image_raster, label_raster, n_pixels, output_path,
     val.sfc <-st_sfc(val.data$geometry)
     
     #create directories for the outputs
-    dir.create(paste0(output_patches_dir, '/', 'training/patched_images'),
+    dir.create(paste0(output_path, '/', 'training/patched_images'),
                recursive = TRUE)
-    dir.create(paste0(output_patches_dir, '/', 'validation/patched_images'),
+    dir.create(paste0(output_path, '/', 'validation/patched_images'),
                recursive = TRUE)
-    dir.create(paste0(output_patches_dir, '/', 'test/patched_images'),
+    dir.create(paste0(output_path, '/', 'test/patched_images'),
                recursive = TRUE)
-    dir.create(paste0(output_patches_dir, '/', 'training/patched_labels'))
-    dir.create(paste0(output_patches_dir, '/', 'validation/patched_labels'))
-    dir.create(paste0(output_patches_dir, '/', 'test/patched_labels'))
+    dir.create(paste0(output_path, '/', 'training/patched_labels'))
+    dir.create(paste0(output_path, '/', 'validation/patched_labels'))
+    dir.create(paste0(output_path, '/', 'test/patched_labels'))
     
     train_image_tiles <- for(i in 1:length(train.sfc)) {
       tile_i <- rast.stack[[-1]] %>% 
         crop(train.sfc[[i]])%>%
-        writeRaster(paste0(output_patches_dir, '/', 'training/patched_images',
+        writeRaster(paste0(output_path, '/', 'training/patched_images',
                            '/', site_name, '_image_patch_', i, '.tif'))
     }
     val_image_tiles <- for(i in 1:length(val.sfc)) {
       tile_i <- rast.stack[[-1]] %>% 
         crop(val.sfc[[i]])%>%
-        writeRaster(paste0(output_patches_dir, '/', 'validation/patched_images',
+        writeRaster(paste0(output_path, '/', 'validation/patched_images',
                            '/', site_name, '_image_patch_', i, '.tif'))
     }
     test_image_tiles <- for(i in 1:length(test.sfc)) {
       tile_i <- rast.stack[[-1]] %>% 
         crop(test.sfc[[i]])%>%
-        writeRaster(paste0(output_patches_dir, '/', 'test/patched_images',
+        writeRaster(paste0(output_path, '/', 'test/patched_images',
                            '/', site_name, '_image_patch_', i, '.tif'))
     }
     train_label_tiles <- for(i in 1:length(train.sfc)) {
       label_tile_i <- rast.stack[[1]] %>%
         crop(train.sfc[[i]]) %>%
-        writeRaster(paste0(output_patches_dir, '/', 'training/patched_labels',
+        writeRaster(paste0(output_path, '/', 'training/patched_labels',
                            '/', site_name,'_label_patch_', i, '.tif'))
     }
     val_label_tiles <- for(i in 1:length(val.sfc)) {
       label_tile_i <- rast.stack[[1]] %>%
         crop(val.sfc[[i]]) %>%
-        writeRaster(paste0(output_patches_dir, '/', 'validation/patched_labels',
+        writeRaster(paste0(output_path, '/', 'validation/patched_labels',
                            '/', site_name,'_label_patch_', i, '.tif'))
     }
     test_label_tiles <- for(i in 1:length(test.sfc)) {
       label_tile_i <- rast.stack[[1]] %>%
         crop(test.sfc[[i]]) %>%
-        writeRaster(paste0(output_patches_dir, '/', 'test/patched_labels',
+        writeRaster(paste0(output_path, '/', 'test/patched_labels',
                            '/', site_name,'_label_patch_', i, '.tif'))
     }
     print(paste('Total number of training patches', length(train.sfc)))
@@ -129,8 +158,8 @@ dl_data_tile <- function(image_raster, label_raster, n_pixels, output_path,
     print(paste('Total number of test patches', length(test.sfc)))
     
   } else {
-    dir.create(paste0(output_patches_dir, '/', 'patched_images'))
-    image.patch.dir <- paste0(output_patches_dir, '/', 'patched_images')
+    dir.create(paste0(output_path, '/', 'patched_images'))
+    image.patch.dir <- paste0(output_path, '/', 'patched_images')
   
     image_tiles <- for(i in 1:length(patch_grid)) {
     tile_i <- rast.stack[[-1]] %>% 
@@ -139,8 +168,8 @@ dl_data_tile <- function(image_raster, label_raster, n_pixels, output_path,
                          '/', site_name, '_image_patch_', i, '.tif'))
         }
   
-    dir.create(paste0(output_patches_dir, '/', 'patched_labs'))
-    label.patch.dir <- paste0(output_patches_dir, '/', 'patched_labs')
+    dir.create(paste0(output_path, '/', 'patched_labs'))
+    label.patch.dir <- paste0(output_path, '/', 'patched_labs')
   
     label_tiles <- for(i in 1:length(patch_grid)) {
       label_tile_i <- rast.stack[[1]] %>%
@@ -153,15 +182,15 @@ dl_data_tile <- function(image_raster, label_raster, n_pixels, output_path,
   overall_time <- stop.time - start.time
   
   print(paste('Elapsed time:', overall_time))
-  print(paste('Image and label tiles saved to:', output_patches_dir))
+  print(paste('Image and label tiles saved to:', output_path))
   print(paste('Total number of patches:', length(patch_grid)))
   print(paste('Size of tiles:', cell_size[1]))
   if (exists('partitioned_tiles')) {
     plot(partitioned_tiles)
     return(partitioned_tiles)
   }
+  }
 }
-
 
 # Slow_parallel_dl_training_tile <- function(image_raster, label_raster, n_pixels, output_path,
 #                             site_name, n_cores) {
@@ -182,8 +211,8 @@ dl_data_tile <- function(image_raster, label_raster, n_pixels, output_path,
 #   cl <- makeCluster(n_cores) # we start the parallel cluster
 #   registerDoParallel(cl) # we register it
 # 
-#   dir.create(paste0(output_patches_dir, '/', 'patched_images'))
-#   image.patch.dir <- paste0(output_patches_dir, '/', 'patched_images')
+#   dir.create(paste0(output_path, '/', 'patched_images'))
+#   image.patch.dir <- paste0(output_path, '/', 'patched_images')
 # 
 #   image_tiles <- foreach(i = 1:length(patch_grid),
 #                       .packages = c('dplyr', 'terra'),
@@ -196,8 +225,8 @@ dl_data_tile <- function(image_raster, label_raster, n_pixels, output_path,
 #                       }
 # 
 # 
-#   dir.create(paste0(output_patches_dir, '/', 'patched_labs'))
-#   label.patch.dir <- paste0(output_patches_dir, '/', 'patched_labs')
+#   dir.create(paste0(output_path, '/', 'patched_labs'))
+#   label.patch.dir <- paste0(output_path, '/', 'patched_labs')
 # 
 #   label_tiles <- foreach(i = 1:length(patch_grid),
 #                        .packages = c('dplyr', 'terra'),
@@ -214,7 +243,7 @@ dl_data_tile <- function(image_raster, label_raster, n_pixels, output_path,
 #   overall_time <- stop.time - start.time
 # 
 #   print(paste('Elapsed time:', overall_time))
-#   print(paste('Image and label tiles saved to:', output_patches_dir,
+#   print(paste('Image and label tiles saved to:', output_path,
 #               'Total # Label Patches:', length(label_tiles),
 #               'Total # Image Patches', length(image_tiles)))
 #   print(paste('Size of tiles:', cell_size))
