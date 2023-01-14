@@ -100,6 +100,7 @@ if (exists('Validation_polygons') & exists("Num_points")) {
   st_write(val, paste0(output_folder, "Val_", Training_Name, '1', ".shp"))
   s1.train.points <- vect(paste0(output_folder, "Training_", Training_Name, '1', ".shp"))
   s1.val.points <- vect(paste0(output_folder, "Val_", Training_Name, '1', ".shp"))
+  rm(s1.train.poly)
 }
 
 if (exists('Validation_points')) {
@@ -112,8 +113,8 @@ if (exists('Validation_points')) {
   test_data <- points[-TrainingP, ]
   writeVector(train_data, (paste0(output_folder, "Partitioned_Train", Training_Name, '1', ".shp")))
   writeVector(train_data, (paste0(output_folder, "Partitioned_Validation", Training_Name, '1', ".shp")))
-  s1.val.points <- vect(Validation_points)
-  s1.train.points <- vect(Training_points)
+  s1.val.points <- vect(paste0(output_folder, "Partitioned_Validation", Training_Name, '1', ".shp"))
+  s1.train.points <- vect(paste0(output_folder, "Partitioned_Train", Training_Name, '1', ".shp"))
 } 
 
 if (!exists('Training_points') & !exists('Training_polygons')) {
@@ -129,9 +130,10 @@ if (exists('Validation_polygons2') & exists(Num_points2)) {
   st_write(poly.points.joined, paste0(output_folder, "Poly_Train", Training_Name, '2', ".shp"))
   PolySample(s2.val.poly)
   st_write(poly.points.joined, paste0(output_folder, "Poly_Val", Training_Name, '2', ".shp"))
-  s2.train.point <- vect(paste0(output_folder, "poly_Train", Training_Name, '2', ".shp"))
-  s2.val.point <- vect(paste0(output_folder, "Poly_Val",Training_Name, '2', ".shp"))
-  rm(s2.val.poly, s2.train.poly))
+  s2.train.points <- vect(paste0(output_folder, "poly_Train", Training_Name, '2', ".shp"))
+  s2.val.points <- vect(paste0(output_folder, "Poly_Val",Training_Name, '2', ".shp"))
+  rm(s2.val.poly, s2.train.poly)
+  
 } else if (exists('Validation_polygons2')) {
   s2.val.poly <- vect(Validation_polygons2)
   s2.train.poly <- vect(Training_polygons2)
@@ -141,13 +143,13 @@ if (exists('Validation_polygons2') & exists(Num_points2)) {
   PolySplit(poly.points.joined)
   st_write(train, paste0(output_folder, "TrainPoints", '2', ".shp"))
   st_write(val, paste0(output_folder, "ValPoints", '2', ".shp"))
-  s2.train.poly <- vect(paste0(output_folder, "TrainPoints", '2', ".shp"))
-  s2.val.poly <- vect(paste0(output_folder, "ValPoints", '2', ".shp"))
+  s2.train.points <- vect(paste0(output_folder, "TrainPoints", '2', ".shp"))
+  s2.val.points <- vect(paste0(output_folder, "ValPoints", '2', ".shp"))
 }
 
 if (exists('Validation_points2')) {
-  s2.val.point <- vect(Validation_points2)
-  s2.train.point <- vect(Training_points2)
+  s2.val.points <- vect(Validation_points2)
+  s2.train.points <- vect(Training_points2)
 } else if (exists('Training_points2')) { 
   partition.points2 <- vect(Training_points2)
   TrainingP2 <- createDataPartition(points$class, p=split.ratio, list = FALsE)
@@ -155,8 +157,8 @@ if (exists('Validation_points2')) {
   test_data2 <- points[-TrainingP2, ]
   writeVector(train_data2, (paste0(output_folder, "Partitioned_Train", Training_Name, '2', ".shp")))
   writeVector(test_data2, (paste0(output_folder, "Partitioned_Validation", Training_Name, '2', ".shp")))
-  s2.train.point <- vect(paste0(output_folder, "Partitioned_Train", Training_Name, '2', ".shp"))
-  s2.val.point <- vect(paste0(output_folder, "Partitioned_Validation", Training_Name, '2', ".shp"))
+  s2.train.points <- vect(paste0(output_folder, "Partitioned_Train", Training_Name, '2', ".shp"))
+  s2.val.points <- vect(paste0(output_folder, "Partitioned_Validation", Training_Name, '2', ".shp"))
   rm(TrainingP2, train_data2, test_data2)
 } 
 
@@ -167,7 +169,22 @@ if ((exists('site2_Optical_Variables') | exists('site2_Terrain_Variables')) & !e
 
 
 ###Extract Values###
-T.points <- 
+if (exists("s1.train.points")) {
+S1T <- s1.train.points
+S1V <- s1.val.points
+} else if (exists("s1.train.poly")) {
+S1T <- s1.train.poly
+S1V <- s1.val.poly
+}
+
+if (exists('s2.train.points')) {
+  S2T <- s2.train.points
+  S2V <- s2.val.points
+} else if (exists('s2.train.poly')) {
+  S2V <- s2.val.poly
+  S2T <- s2.train.poly
+}
+
 ###Boruta####
 if run_boruta == TRUE {
   if ###figure out the site 1 and 2 stuff
