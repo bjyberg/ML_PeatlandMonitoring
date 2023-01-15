@@ -8,7 +8,7 @@ library(caret)
 
 #Terra Functions#
 rasterize_labels <- function(labels, class_field, image_raster, background_value, 
-                             output_path, Overwrite = FALSE){
+                             output_path, ...){
   start.time <- Sys.time()
   if (crs(labels) != crs(image_raster)) {
     cat(paste('Image transformation required for labels from',
@@ -30,8 +30,7 @@ rasterize_labels <- function(labels, class_field, image_raster, background_value
   labs_raster <- rasterize(labels, image_raster, field=class_field,
                            background = background_value)
   if (!missing(output_path)) {
-    writeRaster(labs_raster, paste0(output_path,'Label_Raster', '.tif'),
-                overwrite = Overwrite)
+    writeRaster(labs_raster, paste0(output_path,'Label_Raster', '.tif'), ...)
   }
   stop.time <- Sys.time()
   overall_time <- stop.time - start.time
@@ -40,35 +39,42 @@ rasterize_labels <- function(labels, class_field, image_raster, background_value
 }
 
 dl_data_tile <- function(image_raster, label_raster, n_pixels, output_path,
-                             site_name, partition, seed, test = TRUE) {
+                         site_name, subset_name, partition,
+                         seed, test = TRUE, ...) {
   start.time <- Sys.time()
   
   if (missing(label_raster)){
     xyres <- res(image_raster)
     cell_size <- round((n_pixels*xyres), 3)
     cell_grid <- vect(st_make_grid(image_raster, cellsize = cell_size))
-    if (round(ext(cell_grid),2) != (round(ext(image_raster),2))) {
+    if (round(ext(cell_grid), 2) != (round(ext(image_raster), 2))) {
       image_raster <- extend(image_raster, cell_grid, fill=NA)
       cat(paste('Warning: NA values introduced on edge of raster to allow for 
-                output patches of', n_pixels, 'pixels' ))
+                output patches of', n_pixels, 'pixels'), sep = '\n')
     }
     dir.create(paste0(output_path, '/', 'patched_image'),
                recursive = TRUE)
     
     image_tiles <- for(i in 1:length(cell_grid)) {
       tile_i <- image_raster %>% 
-        crop(cell_grid[i])%>%
-        writeRaster(paste0(output_path, '/', 'patched_image',
-                           '/', site_name, '_image_patch_', i, '.tif'))
+        crop(cell_grid[i])
+      if (missing(subset_name)) {
+          writeRaster(tile_i, paste0(output_path, '/', 'patched_image',
+                           '/', site_name, '_image_patch_', i, '.tif'), ...)
+      } else {
+        writeRaster(tile_i, paste0(output_path, '/', 'patched_image', '/', site_name,
+                           subset_name, '_image_patch_',
+                           i, '.tif'), ...)
+      }
       cat(paste('Tile progress:', i, 'tile of', length(cell_grid)),sep="\n")
     }
     stop.time <- Sys.time()
     overall_time <- stop.time - start.time
     
     cat(paste('Elapsed time:', overall_time), sep="\n")
-    cat(paste('Tiles saved to:', paste0(output_path,'patched_image')),sep="\n")
-    cat(paste('Total number of patches:', length(cell_grid)),sep="\n")
-    cat(paste('Size of tiles:', cell_size[1]),sep="\n")
+    cat(paste('Tiles saved to:', paste0(output_path,'/patched_image')), sep="\n")
+    cat(paste('Total number of patches:', length(cell_grid)), sep="\n")
+    cat(paste('Size of tiles:', cell_size[1]), sep="\n")
   } else {
   if (ext(label_raster) > ext(image_raster)) {
     labels  <- crop(label_raster, image_raster)
@@ -139,14 +145,14 @@ dl_data_tile <- function(image_raster, label_raster, n_pixels, output_path,
       tile_i <- rast.stack[[-1]] %>% 
         crop(train.sfc[[i]])%>%
         writeRaster(paste0(output_path, '/', 'training/patched_images',
-                           '/', site_name, '_image_patch_', i, '.tif'))
+                           '/', site_name, '_image_patch_', i, '.tif'), ...)
       cat(paste('Training tile progress:', i, 'tile of', length(train.sfc)),sep="\n")
     }
     val_image_tiles <- for(i in 1:length(val.sfc)) {
       tile_i <- rast.stack[[-1]] %>% 
         crop(val.sfc[[i]])%>%
         writeRaster(paste0(output_path, '/', 'validation/patched_images',
-                           '/', site_name, '_image_patch_', i, '.tif'))
+                           '/', site_name, '_image_patch_', i, '.tif'), ...)
       cat(paste('Val tile progress:', i, 'tile of', length(val.sfc)),sep="\n")
     }
     if (test == TRUE) {
@@ -154,7 +160,7 @@ dl_data_tile <- function(image_raster, label_raster, n_pixels, output_path,
         tile_i <- rast.stack[[-1]] %>% 
           crop(test.sfc[[i]])%>%
           writeRaster(paste0(output_path, '/', 'test/patched_images',
-                            '/', site_name, '_image_patch_', i, '.tif'))
+                            '/', site_name, '_image_patch_', i, '.tif'), ...)
        cat(paste('Test tile progress:', i, 'tile of', length(test.sfc)),sep="\n")
       }
     }
@@ -163,14 +169,14 @@ dl_data_tile <- function(image_raster, label_raster, n_pixels, output_path,
       label_tile_i <- rast.stack[[1]] %>%
         crop(train.sfc[[i]]) %>%
         writeRaster(paste0(output_path, '/', 'training/patched_labels',
-                           '/', site_name,'_label_patch_', i, '.tif'))
+                           '/', site_name,'_label_patch_', i, '.tif'), ...)
       cat(paste('Train label progress:', i, 'tile of', length(train.sfc)),sep="\n")
     }
     val_label_tiles <- for(i in 1:length(val.sfc)) {
       label_tile_i <- rast.stack[[1]] %>%
         crop(val.sfc[[i]]) %>%
         writeRaster(paste0(output_path, '/', 'validation/patched_labels',
-                           '/', site_name,'_label_patch_', i, '.tif'))
+                           '/', site_name,'_label_patch_', i, '.tif'), ...)
       cat(paste('Val label progress:', i, 'tile of', length(val.sfc)),sep="\n")
     }
     if (test == TRUE) {
@@ -178,7 +184,7 @@ dl_data_tile <- function(image_raster, label_raster, n_pixels, output_path,
         label_tile_i <- rast.stack[[1]] %>%
           crop(test.sfc[[i]]) %>%
           writeRaster(paste0(output_path, '/', 'test/patched_labels',
-                            '/', site_name,'_label_patch_', i, '.tif'))
+                            '/', site_name,'_label_patch_', i, '.tif'), ...)
         cat(paste('test label progress:', i, 'tile of', length(test.sfc)),sep="\n")
       }
     }
@@ -195,7 +201,7 @@ dl_data_tile <- function(image_raster, label_raster, n_pixels, output_path,
     tile_i <- rast.stack[[-1]] %>% 
       crop(patch_grid[[i]])%>%
       writeRaster(paste0(image.patch.dir,
-                         '/', site_name, '_image_patch_', i, '.tif'))
+                         '/', site_name, '_image_patch_', i, '.tif'), ...)
     cat(paste('Image tile progress:', i, 'tile of', length(patch_grid)),sep="\n")
         }
   
@@ -206,7 +212,7 @@ dl_data_tile <- function(image_raster, label_raster, n_pixels, output_path,
       label_tile_i <- rast.stack[[1]] %>%
         crop(patch_grid[[i]]) %>%
         writeRaster(paste0(label.patch.dir,
-                         '/', site_name,'_label_patch_', i, '.tif'))
+                         '/', site_name,'_label_patch_', i, '.tif'), ...)
       cat(paste('label tile progress:', i, 'tile of', length(patch_grid)),sep="\n")
     }
   }
