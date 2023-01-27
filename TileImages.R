@@ -240,7 +240,22 @@ dl_data_tile <- function(image_raster, label_raster, n_pixels, output_path,
     return(partitioned_tiles)
   }
   }
+}
+
+Crop_tiles <- function(large_patches, image_raster, lab_raster, site,
+                       output_path, ...) {
+  for (i in unique(large_patches[[1]])) {
+    patch_i <- filter(large_patches, id == i)
+    id <- paste0(site, '_subset', i)
+    large_tile_i <- image_raster %>%
+      crop(patch_i)
+    large_tile_m <- lab_raster %>%
+      crop(patch_i)
+    writeRaster(large_tile_i, paste0(output_path, '/', id, '_image.tif'), ...)
+    writeRaster(large_tile_m, paste0(output_path, '/', id, '_mask.tif'), ...)
+    #assign(paste0(id, i), large_tile_i, envir=.GlobalEnv)
   }
+}
 
 
 # Slow_parallel_dl_training_tile <- function(image_raster, label_raster, n_pixels, output_path,
