@@ -106,7 +106,7 @@ dl_data_tile <- function(image_raster, label_raster, n_pixels, output_path,
     train.data$partition <- 'train'
     val.test_unsplit <- grid.df[-train.part,]
     
-    if (test == TRUE) {
+    if (isTRUE(test)) {
     test.val.part <- createDataPartition(val.test_unsplit$id,
                                          p=0.6, list=FALSE)
     val.data <- val.test_unsplit[test.val.part,]
@@ -135,7 +135,7 @@ dl_data_tile <- function(image_raster, label_raster, n_pixels, output_path,
                recursive = TRUE)
     dir.create(paste0(output_path, '/', 'validation/patched_labels'))
     
-    if (test == TRUE) {
+    if (isTRUE(test)) {
     dir.create(paste0(output_path, '/', 'test/patched_images'),
                recursive = TRUE)
     dir.create(paste0(output_path, '/', 'test/patched_labels'))
@@ -155,7 +155,7 @@ dl_data_tile <- function(image_raster, label_raster, n_pixels, output_path,
                            '/', site_name, '_image_patch_', i, '.tif'), ...)
       cat(paste('Val tile progress:', i, 'tile of', length(val.sfc)),sep="\n")
     }
-    if (test == TRUE) {
+    if (isTRUE(test)) {
       test_image_tiles <- for(i in 1:length(test.sfc)) {
         tile_i <- rast.stack[[-1]] %>% 
           crop(test.sfc[[i]])%>%
@@ -179,7 +179,7 @@ dl_data_tile <- function(image_raster, label_raster, n_pixels, output_path,
                            '/', site_name,'_label_patch_', i, '.tif'), ...)
       cat(paste('Val label progress:', i, 'tile of', length(val.sfc)),sep="\n")
     }
-    if (test == TRUE) {
+    if (isTRUE(test)) {
       test_label_tiles <- for(i in 1:length(test.sfc)) {
         label_tile_i <- rast.stack[[1]] %>%
           crop(test.sfc[[i]]) %>%
@@ -190,7 +190,7 @@ dl_data_tile <- function(image_raster, label_raster, n_pixels, output_path,
     }
     cat(paste('Total number of training patches:', length(train.sfc)),sep="\n")
     cat(paste('Total number of validation patches:', length(val.sfc)),sep="\n")
-    if (test == TRUE) {
+    if (isTRUE(test)) {
       cat(paste('Total number of test patches:', length(test.sfc)),sep="\n")
     }
   } else {
