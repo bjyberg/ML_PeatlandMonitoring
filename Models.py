@@ -1,5 +1,13 @@
-from keras.models import Model
-from keras.models import Input, Conv2D, MaxPooling2D, UpSampling2D, Conv2DTranspose, Dropout, concatenate, ReLU
+from tensorflow import keras
+from tensorflow.keras import layers, Model
+from keras.layers import Input, Conv2D, MaxPooling2D, UpSampling2D, Conv2DTranspose, Dropout, concatenate, ReLU, BatchNormalization
+
+transform_data = keras.Sequential(
+    [
+        layers.RandomFlip('horizontal_and_vertical'),
+        layers.RandomRotation(0.4)
+    ]
+)
 
 
 def multi_unet_model(n_classes, IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS):
@@ -115,7 +123,7 @@ def get_keras_model(n_classes, IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS):
         previous_block_activation = x  # Set aside next residual
 
     # Add a per-pixel classification layer
-    outputs = layers.Conv2D(num_classes, 3, activation="softmax", padding="same")(x)
+    outputs = layers.Conv2D(n_classes, 3, activation="softmax", padding="same")(x)
 
     # Define the model
     model = keras.Model(inputs, outputs)
@@ -173,7 +181,7 @@ def trippier_model(n_classes, IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS, kernel_init =
     trippier_model = keras.models.Model(inputs, conv6)
 
 #### Simple FCN 
-def simple_FCNN(N_class, IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS):
+def simple_FCNN(n_classes, IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS):
     inputs = Input((IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS))
     c1 = Conv2D(filters=16, kernel_size=3, strides=2, activation="relu", padding="same")(inputs)
     c1 = ReLU()(c1)
@@ -190,7 +198,7 @@ def simple_FCNN(N_class, IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS):
     t3 = Conv2DTranspose(filters=16, kernel_size=3, strides=2, activation='relu', padding="same")(t2)
     t3 = ReLU()(t3)
     t4 = Conv2DTranspose(filters=N_class, kernel_size=3, strides=2, activation='relu', padding="same")(t3)
-    outputs = Conv2D(N_class, (1, 1), activation='softmax')(t4) #or sigmoid/softmax
+    outputs = Conv2D(n_classes, (1, 1), activation='softmax')(t4) #or sigmoid/softmax
      
     model = Model(inputs=[inputs], outputs=[outputs])
     return model
