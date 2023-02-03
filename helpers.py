@@ -1,8 +1,10 @@
 import matplotlib.pyplot as plt
 import tensorflow as tf
+from tensorflow import keras
 import numpy as np
 from natsort import natsorted
 import rasterio
+from rasterio.merge import merge
 import glob
 import os
 
@@ -19,6 +21,35 @@ def find_NaN (im_array):
   Naan = np.argwhere(np.isnan(im_array))
   return print (Naan, 'found in', im_array, 'array')
 
+def write_outputs(input_folder_name, prediction_tiles, output_path):
+  for i in range(prediction_tiles.shape[0]):
+    initial_image_path = natsorted(glob.glob(input_folder_name + '/*.tif'))[i]
+    initial_image = rasterio.open(initial_image_path)
+    profile = initial_image.profile
+    profile.update(count=1)
+    pred = prediction_tiles[i]
+    new_tile = rasterio.open(output_path + '/Labeled_output_' + str(i+1) + '.tif', 'w', **profile)
+    new_tile.write(pred, 1)
+    new_tile.close()
+
+def mosaic_tiles(input_folder_name, output_path):
+  mosaic_list = []
+  for file in natsorted(glob.glob(input_folder_name + '/*.tif')):
+    image = rasterio.open(file)
+    mosaic_list.append(image)
+  mosaic, transform_data = merge(mosaic_list)
+  output_meta = image.meta.copy()
+  output_meta.update(
+      {"driver": "GTiff",
+          "height": mosaic.shape[1],
+          "width": mosaic.shape[2],
+          "transform": transform_data,
+      }
+  )
+  return mosaic
+
+  rasterio.open(output_path + '/mosaic.tif', 'w', **mosaic.profile).write(mosaic)
+  return mosaic
 
 def preprocess_images(x, y, N_class):
   find_NaN(x)
