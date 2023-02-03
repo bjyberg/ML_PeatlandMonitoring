@@ -2,3 +2,8 @@
 .Rhistory
 .RData
 .Ruserdata
+tf
+rasterio
+__pycache__/helpers.cpython-38.pyc
+__pycache__/Models.cpython-38.pyc
+sklearn
